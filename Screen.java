@@ -194,13 +194,6 @@ public class Screen extends JFrame
             int no = count.get("no");
             int total = yes + no;
 
-            // Prevent division by zero
-            if (total == 0)
-            {
-                resultLabel.setText("No data for this combination");
-                return;
-            }
-
             // Calculate probability of the road being blocked
             double probabilityOfYes = (double) yes / total * 100;
 
