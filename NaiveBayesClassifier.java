@@ -62,7 +62,7 @@ public class NaiveBayesClassifier
         return frequencyTable;
     }
 
-    private void trainModel() throws IOException
+    public void trainModel() throws IOException
     {
         // Clear any previous data to prevent overlapping data
         frequencyTable.clear();
