@@ -1,24 +1,29 @@
-/* Screen: This file contains the main logic for the classifier.
+/* NaiveBayesClassifier: This file contains the main logic for the classifier.
  * Author: Kori Okeshola */
 
-import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Scanner;
 
 public class NaiveBayesClassifier
 {
     // Check if model is trained before allowing prediction
     private static boolean isTrained = false;
+    
 
     // Frequency table for storing prediction data
     static Map<String, Map<String, Integer>> frequencyTable = new HashMap<>();
+    static Map<String, Integer> labelCount = new HashMap<>();
+    static int totalRecords;
 
     public NaiveBayesClassifier()
     {
-        this.frequencyTable = new HashMap<>();
+        NaiveBayesClassifier.frequencyTable = new HashMap<>();
+        NaiveBayesClassifier.labelCount = new HashMap<>();
+        NaiveBayesClassifier.totalRecords = 0;
     }
 
     // Predicts the label based on the given feature values.
@@ -35,21 +40,21 @@ public class NaiveBayesClassifier
         // Get the number of occurrences for each label
         if (frequencyTable.containsKey(key))
         {
-            Map<String, Integer> count = frequencyTable.get(key);
-            int yes = count.get("Yes");
-            int no = count.get("No");
+            Map<String, Integer> labelCount = frequencyTable.get(key);
+            String bestLabel = "";
+            double maxProbability = -1;
 
-            if (yes > no)
+            // Calculate the probability for each label
+            for (String label : labelCount.keySet())
             {
-                return "Yes";
+                double probability = calculateProbability(key, label);
+                if (probability > maxProbability)
+                {
+                    maxProbability = probability;
+                    bestLabel = label;
+                }
             }
-            else if(no > yes)
-            {
-                return "No";
-            }
-            else
-            {
-                return "Equal number of occurrences";
+            return bestLabel;
             }
         }
 
@@ -66,37 +71,41 @@ public class NaiveBayesClassifier
     {
         // Clear any previous data to prevent overlapping data
         frequencyTable.clear();
+        labelCount.clear();
+        totalRecords = 0;
         
-        try
+        try (Scanner scanner = new Scanner(csvFile))
         {
-            // Open dataset file to allow for reading of each line
-            try (BufferedReader br = new BufferedReader(new FileReader("road_blocked_dataset.csv")))
+            // Skip header
+            if (scanner.hasNextLine())
             {
-                String line;
+                scanner.nextLine();
+            }
 
-                while ((line = br.readLine()) != null)
-                {
-                    // Trim whitespace and skip empty lines
-                    line = line.trim();
-                    if (line.isEmpty())
-                    {
-                        continue;
-                    }
-                }
-
+            // Read each line
+            while (scanner.hasNextLine())
+            {
+                String line = scanner.nextLine();
                 // Split each line into comma-separated columns
                 String[] valueEntry = line.split(",");
 
+                Record record = new Record(
+                    valueEntry[0],
+                    valueEntry[1],
+                    valueEntry[2],
+                    valueEntry[3],
+                    valueEntry[4]               
+                );
+
                 // Extract feature values (first 4) and label (5th value)
-                String key = String.join(",", valueEntry[0].trim(), valueEntry[1].trim(), valueEntry[2].trim(), valueEntry[3].trim());
-                String label = valueEntry[4].trim().toLowerCase();  // Convert to lowercase for consistency
+                String key = record.getKey();
+                // Split each line into comma-separated columns
+                String label = record.getLabel();
 
                 // Creates a new entry for each unique permutation, if it does not yet exist
                 if(!frequencyTable.containsKey(key))
                 {
                     frequencyTable.put(key, new HashMap<>());
-                    frequencyTable.get(key).put("yes", 0);
-                    frequencyTable.get(key).put("no", 0);
                 }
 
                 // Use map to check how many times this combination has had yes or no so far
@@ -104,7 +113,7 @@ public class NaiveBayesClassifier
                 Map<String, Integer> labelCount = frequencyTable.get(key);
                 
                 // Increment count for current label
-                labelCount.put(label, labelCount.get(label) + 1);
+                labelCount.put(label, labelCount.getOrDefault(label, 0) + 1);
             }
 
             isTrained = true;
@@ -122,6 +131,22 @@ public class NaiveBayesClassifier
         {
             System.err.println("Error reading file: " + e.getMessage());
             throw e;
+        }
+
+         // Calculate probability using Naive Bayes formula
+        private static double calculateProbability(String key, String label)
+        {
+            int labelFrequency = labelCount.get(label);
+            double priorProbability = (double) labelFrequency / totalRecords;
+        
+            Map<String, Integer> featureCount = frequencyTable.get(key);
+            int featureFrequency = featureCount.get(label);
+        
+            // Calculate probability of features given label
+            double likelihood = (double) featureFrequency / labelFrequency;
+        
+            // Return the product of prior and likelihood
+            return priorProbability * likelihood;
         }
     }
 }
