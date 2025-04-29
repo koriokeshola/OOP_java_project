@@ -41,13 +41,13 @@ public class Record
         return construction;
     }
 
-    public String getLabel()
-    {
-        return label;
-    }
-
     public String getKey()
     {
         return String.join(",", accident, weather, traffic, construction);
+    }
+
+    public String getLabel()
+    {
+        return label;
     }
 }
